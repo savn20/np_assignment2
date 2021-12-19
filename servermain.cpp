@@ -16,7 +16,7 @@
 using namespace std;
 /* Needs to be global, to be rechable by callback and main */
 int loopCount=0;
-int terminate=0;
+int serverTerminate=0;
 
 
 /* Call back function, will be called when the SIGALRM is raised when the timer expires. */
@@ -27,7 +27,6 @@ void checkJobbList(int signum){
 
   if(loopCount>20){
     printf("I had enough.\n");
-    terminate=1;
   }
   
   return;
@@ -60,7 +59,7 @@ int main(int argc, char *argv[]){
 #endif
   
   
-  while(terminate==0){
+  while(serverTerminate==0){
     printf("This is the main loop, %d time.\n",loopCount);
     sleep(1);
     loopCount++;
