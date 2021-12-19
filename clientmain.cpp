@@ -2,7 +2,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include <netdb.h>
 #include <sys/socket.h>
+#include <unistd.h>
 #include <arpa/inet.h>
 
 #include "protocol.h"
@@ -26,28 +29,56 @@ int main(int argc, char *argv[])
   }
 
   char *serverIp = argv[1];
-  int serverPort = atoi(argv[2]);
+  char *serverPort = argv[2];
   int socketConnection = -1;
+  int response = -1;
 
-  sockaddr_in serverAddress;
-  int serverAddLen = sizeof(serverAddress);
+  socklen_t serverAddressLen = sizeof(struct sockaddr_in);
 
-  cout << "Establishing connection to " << serverIp << " " << serverPort << endl;
+  /*
+    addrinfo helps to identify host info to bind socket
+  */
+  addrinfo addressInfo, *serverAddress;
+  memset(&addressInfo, 0, sizeof addressInfo);
 
-  // creating UDP socket with specified ip and port
-  socketConnection = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  addressInfo.ai_family = AF_INET;
+  addressInfo.ai_socktype = SOCK_DGRAM;
+  addressInfo.ai_flags = AI_PASSIVE;
 
-  if (socketConnection < 0)
+  if ((response = getaddrinfo(serverIp, serverPort, &addressInfo, &serverAddress)) != 0)
   {
-    cerr << "error: failed to create socket\n"
-         << "program terminated while creating socket" << endl;
+    cerr << "error: unable to connect to specified host\n"
+         << "program terminated due to host error" << endl;
 
     return -2;
   }
 
-  serverAddress.sin_family = AF_INET;
-  serverAddress.sin_port = htons(serverPort);
-  serverAddress.sin_addr.s_addr = inet_addr(serverIp);
+  // creating UDP socket with specified ip and port
+  if ((socketConnection = socket(serverAddress->ai_family, serverAddress->ai_socktype, serverAddress->ai_protocol)) == -1)
+  {
+    cerr << "error: failed to create socket\n"
+         << "program terminated while creating socket" << endl;
+
+    return -3;
+  }
+
+  // connecting to server
+  if (connect(socketConnection, serverAddress->ai_addr, serverAddress->ai_addrlen) == -1)
+  {
+    close(socketConnection);
+    cerr << "error: failed to connect server\n"
+         << "program terminated due to server connection failure" << endl;
+
+    return -4;
+  }
+
+  /*
+    * now that we established connection, 
+    * we dont need to specify server address in
+    * sendto, recvfrom...
+    * so removing `serverAddress`
+  */
+  freeaddrinfo(serverAddress);
 
   /*
     Initial message for handshake
@@ -74,20 +105,16 @@ int main(int argc, char *argv[])
     htons() - helper function to convert data to nertwork byte
   */
 
-  int responseCode = sendto(socketConnection, &clientMessage, sizeof(calcMessage), 0,
-                            (struct sockaddr *)&serverAddress, sizeof(serverAddress));
-
-  if (responseCode < 0)
+  if (sendto(socketConnection, &clientMessage, sizeof(calcMessage), 0,
+             (struct sockaddr *)NULL, serverAddressLen) < 0)
   {
     cerr << "error: unable to send message via socket\n"
-         << "program terminated due to error code: " << responseCode << endl;
+         << "program terminated due to error while communicating with server" << endl;
     return -3;
   }
 
-  int responseBytes = recvfrom(socketConnection, &serverResponse, sizeof(calcProtocol), 0,
-                               (struct sockaddr *)&serverAddress, (socklen_t *)&serverAddress);
-
-  if (responseBytes < 0)
+  if (recvfrom(socketConnection, &serverResponse, sizeof(calcProtocol), 0,
+               (struct sockaddr *)NULL, &serverAddressLen) < 0)
   {
     cerr << "error: no bytes receieved from server\n"
          << "program terminated as there is no response from server" << endl;
