@@ -2,12 +2,12 @@
 
 ### Initial Setup
 
-- [ ] Study `calcMessage` and `calcProtocol` structures
-- [ ] Establish connection to server -> send `calcMessage`
+- [x] Study `calcMessage` and `calcProtocol` structures
+- [x] Establish connection to server -> send `calcMessage`
 
 ### Handle abort
 
-- if server doesn't support, it'll report with `calcMessage` with
+- [x] if server doesn't support, it'll report with `calcMessage` with
 
 ```js
 var abort = {
@@ -22,7 +22,7 @@ var abort = {
 
 ### Perform mentioned assignment 
 
-- [ ] if server supports the client, it'll respond with `calcProtocol` with assignment to perform
+- [x] if server supports the client, it'll respond with `calcProtocol` with assignment to perform
 
 ### Handle timeouts
 - [ ] Start a timer and after 2 seconds, if there's no reply send again

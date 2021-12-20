@@ -10,15 +10,18 @@
 
 #include "protocol.h"
 
+#define MESSAGE_LEN sizeof(calcMessage)
+#define PROTOCOL_LEN sizeof(calcProtocol)
+
 using namespace std;
 
 int main(int argc, char *argv[])
 {
 
   /*
-    * parses command line input to <ip> <port>
-    * terminates program if there's mismatch
-  */
+   * parses command line input to <ip> <port>
+   * terminates program if there's mismatch
+   */
 
   if (argc != 3)
   {
@@ -31,7 +34,7 @@ int main(int argc, char *argv[])
   char *serverIp = argv[1];
   char *serverPort = argv[2];
   int socketConnection = -1;
-  int response = -1;
+  int responseBytes = -1;
 
   socklen_t serverAddressLen = sizeof(struct sockaddr_in);
 
@@ -45,13 +48,15 @@ int main(int argc, char *argv[])
   addressInfo.ai_socktype = SOCK_DGRAM;
   addressInfo.ai_flags = AI_PASSIVE;
 
-  if ((response = getaddrinfo(serverIp, serverPort, &addressInfo, &serverAddress)) != 0)
+  if ((responseBytes = getaddrinfo(serverIp, serverPort, &addressInfo, &serverAddress)) != 0)
   {
     cerr << "error: unable to connect to specified host\n"
          << "program terminated due to host error" << endl;
 
     return -2;
   }
+
+  cout << "client: establishing connection to " << serverIp << ":" << serverPort << endl;
 
   // creating UDP socket with specified ip and port
   if ((socketConnection = socket(serverAddress->ai_family, serverAddress->ai_socktype, serverAddress->ai_protocol)) == -1)
@@ -73,11 +78,11 @@ int main(int argc, char *argv[])
   }
 
   /*
-    * now that we established connection, 
-    * we dont need to specify server address in
-    * sendto, recvfrom...
-    * so removing `serverAddress`
-  */
+   * now that we established connection,
+   * we dont need to specify server address in
+   * sendto, recvfrom...
+   * so removing `serverAddress`
+   */
   freeaddrinfo(serverAddress);
 
   /*
@@ -89,10 +94,10 @@ int main(int argc, char *argv[])
     minor_version: 0
   */
   calcMessage clientMessage;
-  memset(&clientMessage, 0, sizeof clientMessage);
+  memset(&clientMessage, 0, MESSAGE_LEN);
 
   calcProtocol serverResponse;
-  memset(&serverResponse, 0, sizeof serverResponse);
+  memset(&serverResponse, 0, PROTOCOL_LEN);
 
   clientMessage.type = htons(22);
   clientMessage.message = htonl(0);
@@ -105,7 +110,7 @@ int main(int argc, char *argv[])
     htons() - helper function to convert data to nertwork byte
   */
 
-  if (sendto(socketConnection, &clientMessage, sizeof(calcMessage), 0,
+  if (sendto(socketConnection, &clientMessage, MESSAGE_LEN, 0,
              (struct sockaddr *)NULL, serverAddressLen) < 0)
   {
     cerr << "error: unable to send message via socket\n"
@@ -113,15 +118,48 @@ int main(int argc, char *argv[])
     return -3;
   }
 
-  if (recvfrom(socketConnection, &serverResponse, sizeof(calcProtocol), 0,
-               (struct sockaddr *)NULL, &serverAddressLen) < 0)
+  if ((responseBytes = recvfrom(socketConnection, &serverResponse, PROTOCOL_LEN, 0,
+                                (struct sockaddr *)NULL, &serverAddressLen)) == -1)
   {
     cerr << "error: no bytes receieved from server\n"
          << "program terminated as there is no response from server" << endl;
     return -4;
   }
 
+  // handling abort
+  if (responseBytes == MESSAGE_LEN)
+  {
+    cerr << "server: NOT OK!" << endl
+         << "error: server doesn't support the version provided" << clientMessage.major_version << endl
+         << "program terminated due to version error" << endl;
+    return -5;
+  }
+
   printResponse(serverResponse);
+
+  performAssignment(&serverResponse);
+
+  printResponse(serverResponse);
+
+  if (sendto(socketConnection, &serverResponse, PROTOCOL_LEN, 0,
+             (struct sockaddr *)NULL, serverAddressLen) < 0)
+  {
+    cerr << "error: unable to send message via socket\n"
+         << "program terminated due to error while communicating with server" << endl;
+    return -3;
+  }
+
+  if ((responseBytes = recvfrom(socketConnection, &clientMessage, MESSAGE_LEN, 0,
+                                (struct sockaddr *)NULL, &serverAddressLen)) == -1)
+  {
+    cerr << "error: no bytes receieved from server\n"
+         << "program terminated as there is no response from server" << endl;
+    return -4;
+  }
+
+  cout << "response length:" << responseBytes << endl;
+
+  printMessage(clientMessage);
 
   return 0;
 }

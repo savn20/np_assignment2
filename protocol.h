@@ -13,10 +13,10 @@
 
 using namespace std;
 
-/* 
-   Used in both directions; if 
-   server->client,type should be set to 1, 
-   client->server type = 2. 
+/*
+   Used in both directions; if
+   server->client,type should be set to 1,
+   client->server type = 2.
  */
 struct __attribute__((__packed__)) calcProtocol
 {
@@ -46,6 +46,7 @@ struct __attribute__((__packed__)) calcMessage
 
 void printMessage(calcMessage message)
 {
+  cout << "--message--" << endl;
   cout << "type : " << ntohs(message.type) << endl;
   cout << "message : " << ntohl(message.message) << endl;
   cout << "protocol : " << ntohs(message.protocol) << endl;
@@ -55,6 +56,7 @@ void printMessage(calcMessage message)
 
 void printResponse(calcProtocol protocol)
 {
+  cout << "--server response--" << endl;
   cout << "type: " << ntohs(protocol.type) << endl;
   cout << "major_version: " << ntohs(protocol.major_version) << endl;
   cout << "minor_version: " << ntohs(protocol.minor_version) << endl;
@@ -82,7 +84,7 @@ other numbers are reserved
 
 */
 
-/* 
+/*
    calcMessage.type
    1 - server-to-client, text protocol
    2 - server-to-client, binary protocol
@@ -90,11 +92,57 @@ other numbers are reserved
    21 - client-to-server, text protocol
    22 - client-to-server, binary protocol
    23 - client-to-serve, N/A
-   
-   calcMessage.message 
+
+   calcMessage.message
 
    0 = Not applicable/availible (N/A or NA)
-   1 = OK   // Accept 
-   2 = NOT OK  // Reject 
+   1 = OK   // Accept
+   2 = NOT OK  // Reject
 
 */
+
+void performAssignment(calcProtocol *response)
+{
+  auto operation = ntohl(response->arith);
+  int inResult = 0;
+  double flResult = 0.0;
+
+  switch (operation)
+  {
+  case 1:
+    inResult = ntohl(response->inValue1) + ntohl(response->inValue2);
+    response->inResult = htonl(inResult);
+    break;
+  case 2:
+    inResult = ntohl(response->inValue1) - ntohl(response->inValue2);
+    response->inResult = htonl(inResult);
+    break;
+  case 3:
+    inResult = ntohl(response->inValue1) * ntohl(response->inValue2);
+    response->inResult = htonl(inResult);
+    break;
+  case 4:
+    inResult = ntohl(response->inValue1) / ntohl(response->inValue2);
+    response->inResult = htonl(inResult);
+    break;
+  case 5:
+    flResult = response->flValue1 + response->flValue2;
+    response->flResult = flResult;
+    break;
+  case 6:
+    flResult = response->flValue1 - response->flValue2;
+    response->flResult = flResult;
+    break;
+  case 7:
+    flResult = response->flValue1 * response->flValue2;
+    response->flResult = flResult;
+    break;
+  case 8:
+    flResult = response->flValue1 / response->flValue2;
+    response->flResult = flResult;
+    break;
+
+  default:
+    break;
+  }
+}
