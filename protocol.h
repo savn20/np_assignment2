@@ -101,6 +101,49 @@ other numbers are reserved
 
 */
 
+void _printOperation(int type)
+{
+  switch (type)
+  {
+  case 1:
+  case 5:
+    cout << "add";
+    break;
+  case 2:
+  case 6:
+    cout << "sub";
+    break;
+  case 3:
+  case 7:
+    cout << "mul";
+    break;
+  case 4:
+  case 8:
+    cout << "div";
+    break;
+  default:
+    break;
+  }
+}
+
+void printAssignment(calcProtocol response)
+{
+  int operation = ntohl(response.arith);
+
+  if (operation > 4)
+  {
+    cout << "server: f";
+    _printOperation(operation);
+    cout << " " << response.flValue1 << " " << response.flValue2 << endl;
+  }
+  else
+  {
+    cout << "server: ";
+    _printOperation(operation);
+    cout << " " << response.inValue1 << " " << response.inValue2 << endl;
+  }
+}
+
 void performAssignment(calcProtocol *response)
 {
   auto operation = ntohl(response->arith);
@@ -144,5 +187,14 @@ void performAssignment(calcProtocol *response)
 
   default:
     break;
+  }
+
+  if (operation > 4)
+  {
+    cout << "client: sent result " << flResult << endl;
+  }
+  else
+  {
+    cout << "client: sent result " << inResult << endl;
   }
 }

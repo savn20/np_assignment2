@@ -13,10 +13,18 @@
 #define MESSAGE_LEN sizeof(calcMessage)
 #define PROTOCOL_LEN sizeof(calcProtocol)
 
+// comment the DEBUG macro to turn off comments in the console
+#define DEBUG
+
 using namespace std;
 
 int main(int argc, char *argv[])
 {
+  // disables debugging when there's no DEBUG macro defined
+#ifndef DEBUG
+  cout.setstate(ios_base::failbit);
+  cerr.setstate(ios_base::failbit);
+#endif
 
   /*
    * parses command line input to <ip> <port>
@@ -56,7 +64,7 @@ int main(int argc, char *argv[])
     return -2;
   }
 
-  cout << "client: establishing connection to " << serverIp << ":" << serverPort << endl;
+  cout << "client: establishing connection to " << serverIp << ":" << serverPort << "..." << endl;
 
   // creating UDP socket with specified ip and port
   if ((socketConnection = socket(serverAddress->ai_family, serverAddress->ai_socktype, serverAddress->ai_protocol)) == -1)
@@ -99,16 +107,15 @@ int main(int argc, char *argv[])
   calcProtocol serverResponse;
   memset(&serverResponse, 0, PROTOCOL_LEN);
 
+  /*
+    host to network
+    htons() - helper function to convert data to nertwork byte
+  */
   clientMessage.type = htons(22);
   clientMessage.message = htonl(0);
   clientMessage.protocol = htons(17);
   clientMessage.major_version = htons(1);
   clientMessage.minor_version = htons(0);
-
-  /*
-    host to network
-    htons() - helper function to convert data to nertwork byte
-  */
 
   if (sendto(socketConnection, &clientMessage, MESSAGE_LEN, 0,
              (struct sockaddr *)NULL, serverAddressLen) < 0)
@@ -126,6 +133,8 @@ int main(int argc, char *argv[])
     return -4;
   }
 
+  printAssignment(serverResponse);
+
   // handling abort
   if (responseBytes == MESSAGE_LEN)
   {
@@ -135,11 +144,7 @@ int main(int argc, char *argv[])
     return -5;
   }
 
-  printResponse(serverResponse);
-
   performAssignment(&serverResponse);
-
-  printResponse(serverResponse);
 
   if (sendto(socketConnection, &serverResponse, PROTOCOL_LEN, 0,
              (struct sockaddr *)NULL, serverAddressLen) < 0)
@@ -157,9 +162,7 @@ int main(int argc, char *argv[])
     return -4;
   }
 
-  cout << "response length:" << responseBytes << endl;
-
-  printMessage(clientMessage);
+  ntohl(clientMessage.message) == 1 ? cout << "server: OK!\n" : cerr << "server: NOT OK!\n";
 
   return 0;
 }
