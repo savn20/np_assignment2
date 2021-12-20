@@ -75,6 +75,12 @@ int main(int argc, char *argv[])
     return -3;
   }
 
+  char *timeOut = "2";
+
+  // sets the timeout aka. time to wait until the response is received
+  setsockopt(socketConnection, SOL_SOCKET, SO_RCVTIMEO, timeOut, sizeof(int));
+  setsockopt(socketConnection, SOL_SOCKET, SO_SNDTIMEO, timeOut, sizeof(int));
+
   // connecting to server
   if (connect(socketConnection, serverAddress->ai_addr, serverAddress->ai_addrlen) == -1)
   {
@@ -125,6 +131,7 @@ int main(int argc, char *argv[])
     return -3;
   }
 
+  // TODO: Implement timeout
   if ((responseBytes = recvfrom(socketConnection, &serverResponse, PROTOCOL_LEN, 0,
                                 (struct sockaddr *)NULL, &serverAddressLen)) == -1)
   {
@@ -144,8 +151,7 @@ int main(int argc, char *argv[])
     return -5;
   }
 
-  performAssignment(&serverResponse);
-
+  // sending calculated assignment
   if (sendto(socketConnection, &serverResponse, PROTOCOL_LEN, 0,
              (struct sockaddr *)NULL, serverAddressLen) < 0)
   {
@@ -154,6 +160,10 @@ int main(int argc, char *argv[])
     return -3;
   }
 
+  performAssignment(&serverResponse);
+
+  // server response
+  // TODO: Implement timeout
   if ((responseBytes = recvfrom(socketConnection, &clientMessage, MESSAGE_LEN, 0,
                                 (struct sockaddr *)NULL, &serverAddressLen)) == -1)
   {
