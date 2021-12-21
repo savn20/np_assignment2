@@ -140,7 +140,7 @@ void printAssignment(calcProtocol response)
   {
     cout << "server: ";
     _printOperation(operation);
-    cout << " " << response.inValue1 << " " << response.inValue2 << endl;
+    cout << " " << ntohl(response.inValue1) << " " << ntohl(response.inValue2) << endl;
   }
 }
 

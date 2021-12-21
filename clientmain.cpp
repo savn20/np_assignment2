@@ -43,6 +43,7 @@ int main(int argc, char *argv[])
   char *serverPort = argv[2];
   int socketConnection = -1;
   int responseBytes = -1;
+  int wait = 3;
 
   socklen_t serverAddressLen = sizeof(struct sockaddr_in);
 
@@ -75,11 +76,11 @@ int main(int argc, char *argv[])
     return -3;
   }
 
-  char *timeOut = "2";
+  string timeOut = "2";
 
   // sets the timeout aka. time to wait until the response is received
-  setsockopt(socketConnection, SOL_SOCKET, SO_RCVTIMEO, timeOut, sizeof(int));
-  setsockopt(socketConnection, SOL_SOCKET, SO_SNDTIMEO, timeOut, sizeof(int));
+  setsockopt(socketConnection, SOL_SOCKET, SO_RCVTIMEO, timeOut.c_str(), sizeof(int));
+  setsockopt(socketConnection, SOL_SOCKET, SO_SNDTIMEO, timeOut.c_str(), sizeof(int));
 
   // connecting to server
   if (connect(socketConnection, serverAddress->ai_addr, serverAddress->ai_addrlen) == -1)
@@ -131,9 +132,24 @@ int main(int argc, char *argv[])
     return -3;
   }
 
-  // TODO: Implement timeout
-  if ((responseBytes = recvfrom(socketConnection, &serverResponse, PROTOCOL_LEN, 0,
-                                (struct sockaddr *)NULL, &serverAddressLen)) == -1)
+  wait = 3;
+  responseBytes = -1;
+
+  while (wait)
+  {
+    responseBytes = recvfrom(socketConnection, &serverResponse, PROTOCOL_LEN, 0,
+                             (struct sockaddr *)NULL, &serverAddressLen);
+
+    if (wait < 3)
+      cout << "client: retransmitting message..." << endl;
+
+    if (responseBytes != -1)
+      break;
+
+    wait--;
+  }
+
+  if (responseBytes == -1)
   {
     cerr << "error: no bytes receieved from server\n"
          << "program terminated as there is no response from server" << endl;
@@ -151,6 +167,8 @@ int main(int argc, char *argv[])
     return -5;
   }
 
+  performAssignment(&serverResponse);
+
   // sending calculated assignment
   if (sendto(socketConnection, &serverResponse, PROTOCOL_LEN, 0,
              (struct sockaddr *)NULL, serverAddressLen) < 0)
@@ -160,17 +178,30 @@ int main(int argc, char *argv[])
     return -3;
   }
 
-  performAssignment(&serverResponse);
+  wait = 3;
+  responseBytes = -1;
 
-  // server response
-  // TODO: Implement timeout
-  if ((responseBytes = recvfrom(socketConnection, &clientMessage, MESSAGE_LEN, 0,
-                                (struct sockaddr *)NULL, &serverAddressLen)) == -1)
+  while (wait)
+  {
+    responseBytes = recvfrom(socketConnection, &clientMessage, MESSAGE_LEN, 0,
+                             (struct sockaddr *)NULL, &serverAddressLen);
+    if (wait < 3)
+      cout << "client: retransmitting message..." << endl;
+
+    if (responseBytes != -1)
+      break;
+
+    wait--;
+  }
+
+  if (responseBytes == -1)
   {
     cerr << "error: no bytes receieved from server\n"
          << "program terminated as there is no response from server" << endl;
     return -4;
   }
+
+  // server response
 
   ntohl(clientMessage.message) == 1 ? cout << "server: OK!\n" : cerr << "server: NOT OK!\n";
 
