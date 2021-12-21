@@ -27,20 +27,22 @@ int main(int argc, char *argv[])
 #endif
 
   /*
-   * parses command line input to <ip> <port>
+   * parses command line input to <ip>:<port>
    * terminates program if there's mismatch
    */
 
-  if (argc != 3)
+  if (argc != 2)
   {
-    cerr << "usage: client <ip> <port>\n"
+    cerr << "usage: client <ip>:<port>\n"
          << "program terminated due to wrong usage" << endl;
 
     return -1;
   }
+  
+  char delim[]=":";
+  char *serverIp = strtok(argv[1],delim);
+  char *serverPort = strtok(NULL,delim);
 
-  char *serverIp = argv[1];
-  char *serverPort = argv[2];
   int socketConnection = -1;
   int responseBytes = -1;
   int wait = 3;
