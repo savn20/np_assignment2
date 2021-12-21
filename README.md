@@ -25,8 +25,8 @@ var abort = {
 - [x] if server supports the client, it'll respond with `calcProtocol` with assignment to perform
 
 ### Handle timeouts
-- [ ] Start a timer and after 2 seconds, if there's no reply send again
-- [ ] After three such timeouts, it must abort and print a notification that the server did not reply.
+- [x] Start a timer and after 2 seconds, if there's no reply send again
+- [x] After three such timeouts, it must abort and print a notification that the server did not reply.
 - [ ] Study the local IP Issue -> Hence, in the UDP unbound socket case, it is ok to show the obtained address of '0.0.0.0'.
 
 ### Debugging
