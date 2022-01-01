@@ -34,13 +34,13 @@
 ### UDP Server
 
 1. Server Setup
-   - [] Create a UDP server at given ip:port
-   - [] Start listening for clients
+   - [x] Create a UDP server at given ip:port
+   - [x] Start listening for clients
 2. Handling Clients
-   - [] Handle multiple clients
+   - [x] Handle multiple clients
    - [] Accept clients that supports version 1
 3. Task Management
-    - [] Generate random task
+    - [x] Generate random task
     - [] Set timeout for 10s
     - [] Reject clients that sends incorrect IDs 
 

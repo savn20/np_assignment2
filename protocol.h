@@ -1,11 +1,11 @@
-#ifdef __GCC_IEC_559
-#pragma message("GCC ICE 559 defined...")
+// #ifdef __GCC_IEC_559
+// #pragma message("GCC ICE 559 defined...")
 
-#else
+// #else
 
-#error *** do not use this platform
+// #error *** do not use this platform
 
-#endif
+// #endif
 
 #include <stdint.h>
 #include <iostream>
@@ -42,6 +42,11 @@ struct __attribute__((__packed__)) calcMessage
   uint16_t protocol;      // conversion needed
   uint16_t major_version; // 1, conversion needed
   uint16_t minor_version; // 0 , conversion needed
+};
+
+union __attribute__((__packed__)) clientResponse{
+  struct calcMessage message;
+  struct calcProtocol protocol;
 };
 
 void printMessage(calcMessage message)
@@ -146,7 +151,7 @@ void printAssignment(calcProtocol response)
 
 void performAssignment(calcProtocol *response)
 {
-  auto operation = ntohl(response->arith);
+  int operation = ntohl(response->arith);
   int inResult = 0;
   double flResult = 0.0;
 

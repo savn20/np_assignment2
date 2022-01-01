@@ -24,9 +24,9 @@ Implementation in calcLib.c
   int initCalcLib_seed(unsigned int seed); // Init internal variables to the library, use <seed> for specific variable. 
 
   char* randomType(void); // Return a string to an mathematical operator
-  int randomInt(void);// Return a random integer, between 0 and 100. 
-  double randomFloat(void);// Return a random float between 0.0 and 100.0
-
+  int randomInt(void); // Return a random integer, between 0 and 100. 
+  double randomFloat(void); // Return a random float between 0.0 and 100.0
+  uint32_t randomTask(void); // Return a random math operation 
 
 #endif
 

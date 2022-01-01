@@ -71,3 +71,7 @@ double randomFloat(void){
 };
 
 
+uint32_t randomTask(void){
+   uint32_t tasks=sizeof(arith)/(sizeof(char*)); 
+  return (rand() % tasks) + 1;
+};
