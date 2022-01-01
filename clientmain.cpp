@@ -26,11 +26,9 @@ int main(int argc, char *argv[])
   cerr.setstate(ios_base::failbit);
 #endif
 
-  /*
-   * parses command line input to <ip>:<port>
-   * terminates program if there's mismatch
-   */
-
+  /*************************************/
+  /*  getting ip and port from args   */
+  /***********************************/
   if (argc != 2)
   {
     cerr << "usage: client <ip>:<port>\n"
@@ -38,10 +36,10 @@ int main(int argc, char *argv[])
 
     return -1;
   }
-  
-  char delim[]=":";
-  char *serverIp = strtok(argv[1],delim);
-  char *serverPort = strtok(NULL,delim);
+
+  char delim[] = ":";
+  char *serverIp = strtok(argv[1], delim);
+  char *serverPort = strtok(NULL, delim);
 
   int socketConnection = -1;
   int responseBytes = -1;
@@ -51,9 +49,9 @@ int main(int argc, char *argv[])
   timeval timeout;
   timeout.tv_sec = 5;
 
-  /*
-    addrinfo helps to identify host info to bind socket
-  */
+  /*************************************/
+  /*   setting up server metadata     */
+  /***********************************/
   addrinfo addressInfo, *serverAddress;
   memset(&addressInfo, 0, sizeof addressInfo);
 
@@ -69,7 +67,7 @@ int main(int argc, char *argv[])
     return -2;
   }
 
-  cout << "client: establishing connection to " << serverIp << ":" << serverPort << "..." << endl;
+  cout << "client: establishing connection to " << serverIp << ":" << serverPort << endl;
 
   // creating UDP socket with specified ip and port
   if ((socketConnection = socket(serverAddress->ai_family, serverAddress->ai_socktype, serverAddress->ai_protocol)) == -1)
@@ -116,34 +114,35 @@ int main(int argc, char *argv[])
   calcProtocol serverResponse;
   memset(&serverResponse, 0, PROTOCOL_LEN);
 
-  /*
-    host to network
-    htons() - helper function to convert data to nertwork byte
-  */
   clientMessage.type = htons(22);
   clientMessage.message = htonl(0);
   clientMessage.protocol = htons(17);
   clientMessage.major_version = htons(1);
   clientMessage.minor_version = htons(0);
 
-  if (sendto(socketConnection, &clientMessage, MESSAGE_LEN, 0,
-             (struct sockaddr *)NULL, serverAddressLen) < 0)
-  {
-    cerr << "error: unable to send message via socket\n"
-         << "program terminated due to error while communicating with server" << endl;
-    return -3;
-  }
-
   wait = 3;
   responseBytes = -1;
 
+  /*************************************/
+  /*  handshake: sending version 1.0  */
+  /***********************************/
+  cout << "handshake: sending version 1.0 to " << serverIp << ":" << serverPort << "..." << endl;
+
   while (wait)
   {
-    responseBytes = recvfrom(socketConnection, &serverResponse, PROTOCOL_LEN, 0,
-                             (struct sockaddr *)NULL, &serverAddressLen);
-
     if (wait < 3)
       cout << "client: retransmitting message..." << endl;
+
+    if (sendto(socketConnection, &clientMessage, MESSAGE_LEN, 0,
+               (struct sockaddr *)NULL, serverAddressLen) < 0)
+    {
+      cerr << "error: unable to send message via socket\n"
+           << "program terminated due to error while communicating with server" << endl;
+      return -3;
+    }
+
+    responseBytes = recvfrom(socketConnection, &serverResponse, PROTOCOL_LEN, 0,
+                             (struct sockaddr *)NULL, &serverAddressLen);
 
     if (responseBytes != -1)
       break;
@@ -153,42 +152,47 @@ int main(int argc, char *argv[])
 
   if (responseBytes == -1)
   {
+    printf("server did not reply\n");
     cerr << "error: no bytes receieved from server\n"
          << "program terminated as there is no response from server" << endl;
     return -4;
   }
-
-  printAssignment(serverResponse);
-
-  // handling abort
-  if (responseBytes == MESSAGE_LEN)
+  else if (responseBytes == MESSAGE_LEN)
   {
     cerr << "server: NOT OK!" << endl
          << "error: server doesn't support the version provided" << clientMessage.major_version << endl
          << "program terminated due to version error" << endl;
     return -5;
   }
+  else
+  {
+    printf("connected to server %s:%s\n", serverIp, serverPort);
+    printAssignment(serverResponse);
+  }
 
   performAssignment(&serverResponse);
 
-  // sending calculated assignment
-  if (sendto(socketConnection, &serverResponse, PROTOCOL_LEN, 0,
-             (struct sockaddr *)NULL, serverAddressLen) < 0)
-  {
-    cerr << "error: unable to send message via socket\n"
-         << "program terminated due to error while communicating with server" << endl;
-    return -3;
-  }
-
+  /****************************************/
+  /* task: sending result of given task  */
+  /**************************************/
   wait = 3;
   responseBytes = -1;
 
   while (wait)
   {
-    responseBytes = recvfrom(socketConnection, &clientMessage, MESSAGE_LEN, 0,
-                             (struct sockaddr *)NULL, &serverAddressLen);
     if (wait < 3)
       cout << "client: retransmitting message..." << endl;
+
+    if (sendto(socketConnection, &serverResponse, PROTOCOL_LEN, 0,
+               (struct sockaddr *)NULL, serverAddressLen) < 0)
+    {
+      cerr << "error: unable to send message via socket\n"
+           << "program terminated due to error while communicating with server" << endl;
+      return -3;
+    }
+
+    responseBytes = recvfrom(socketConnection, &clientMessage, MESSAGE_LEN, 0,
+                             (struct sockaddr *)NULL, &serverAddressLen);
 
     if (responseBytes != -1)
       break;
@@ -198,6 +202,7 @@ int main(int argc, char *argv[])
 
   if (responseBytes == -1)
   {
+    printf("server did not reply\n");
     cerr << "error: no bytes receieved from server\n"
          << "program terminated as there is no response from server" << endl;
     return -4;
