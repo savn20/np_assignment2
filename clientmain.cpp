@@ -48,6 +48,8 @@ int main(int argc, char *argv[])
   int wait = 3;
 
   socklen_t serverAddressLen = sizeof(struct sockaddr_in);
+  timeval timeout;
+  timeout.tv_sec = 5;
 
   /*
     addrinfo helps to identify host info to bind socket
@@ -78,11 +80,9 @@ int main(int argc, char *argv[])
     return -3;
   }
 
-  string timeOut = "2";
-
   // sets the timeout aka. time to wait until the response is received
-  setsockopt(socketConnection, SOL_SOCKET, SO_RCVTIMEO, timeOut.c_str(), sizeof(int));
-  setsockopt(socketConnection, SOL_SOCKET, SO_SNDTIMEO, timeOut.c_str(), sizeof(int));
+  setsockopt(socketConnection, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout);
+  setsockopt(socketConnection, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof timeout);
 
   // connecting to server
   if (connect(socketConnection, serverAddress->ai_addr, serverAddress->ai_addrlen) == -1)

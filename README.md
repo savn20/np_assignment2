@@ -1,36 +1,53 @@
 # UDP Assignment
 
-### Initial Setup
+### UDP Client
 
-- [x] Study `calcMessage` and `calcProtocol` structures
-- [x] Establish connection to server -> send `calcMessage`
+1. Initial Setup
 
-### Handle abort
+   - [x] Study `calcMessage` and `calcProtocol` structures
+   - [x] Establish connection to server -> send `calcMessage`
 
-- [x] if server doesn't support, it'll report with `calcMessage` with
+2. Handle abort
 
-```js
-var abort = {
-    type=2, 
-    message=2, 
-    major_version=1,
-    minor_version=0
-}
-```
-    
-- The client should print a notification that the server sent a 'NOT OK' message, then terminate.
+   - [x] if server doesn't support, it'll report with `calcMessage` with
 
-### Perform mentioned assignment 
+   ```js
+   var abort = {
+       type=2,
+       message=2,
+       major_version=1,
+       minor_version=0
+   }
+   ```
 
-- [x] if server supports the client, it'll respond with `calcProtocol` with assignment to perform
+   - The client should print a notification that the server sent a 'NOT OK' message, then terminate.
 
-### Handle timeouts
-- [x] Start a timer and after 2 seconds, if there's no reply send again
-- [x] After three such timeouts, it must abort and print a notification that the server did not reply.
-- [ ] Study the local IP Issue -> Hence, in the UDP unbound socket case, it is ok to show the obtained address of '0.0.0.0'.
+3. Perform mentioned assignment
+
+   - [x] if server supports the client, it'll respond with `calcProtocol` with assignment to perform
+
+4. Handle timeouts
+
+   - [x] Start a timer and after 2 seconds, if there's no reply send again
+   - [x] After three such timeouts, it must abort and print a notification that the server did not reply
+
+### UDP Server
+
+1. Server Setup
+   - [] Create a UDP server at given ip:port
+   - [] Start listening for clients
+2. Handling Clients
+   - [] Handle multiple clients
+   - [] Accept clients that supports version 1
+3. Task Management
+    - [] Generate random task
+    - [] Set timeout for 10s
+    - [] Reject clients that sends incorrect IDs 
+
 
 ### Debugging
-While building it's common to log debug info to the console, 
+
+While building it's common to log debug info to the console,
 but it's best to have a flag to turn on/off those logs
 
 - [x] use macros to turn on/off debugging
