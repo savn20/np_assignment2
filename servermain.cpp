@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <bits/stdc++.h>
 #include "protocol.h"
-#include "calcLib.h"
+#include "calcLib.c"
 
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -20,6 +21,47 @@
 
 using namespace std;
 
+vector<calcJob> jobs(USER_LIMIT);
+
+void addJob(calcJob job)
+{
+    cout << "adding new job: "<< job.id << endl;
+
+    jobs.push_back(job);
+}
+
+calcJob *getJobById(int id)
+{
+    vector<calcJob>::iterator it = jobs.begin();
+
+    for (; it != jobs.end(); ++it)
+        if (id == it->id)
+            break;
+
+    return it.base();
+}
+
+void removeJob(int jobId)
+{
+    cout << "removing job: "<< jobId << endl;
+
+    vector<calcJob>::iterator itr = jobs.begin();
+
+    for (; itr != jobs.end(); ++itr)
+        if (jobId == itr->id)
+            break;
+
+    if (itr->id == jobId)
+    {
+        jobs.erase(itr);
+    }
+}
+
+void checkJobbList(int signum)
+{
+    //TODO: how you remove job?
+}
+
 int main(int argc, char *argv[])
 {
     // disables debugging when there's no DEBUG macro defined
@@ -27,6 +69,21 @@ int main(int argc, char *argv[])
     cout.setstate(ios_base::failbit);
     cerr.setstate(ios_base::failbit);
 #endif
+
+    /* 
+     Prepare to setup a reoccurring event every 10s. 
+     If it_interval, or it_value is omitted, 
+        it will be a single alarm 10s after it has been set. 
+    */
+    struct itimerval alarmTime;
+    alarmTime.it_interval.tv_sec = 10;
+    alarmTime.it_interval.tv_usec = 10;
+    alarmTime.it_value.tv_sec = 10;
+    alarmTime.it_value.tv_usec = 10;
+
+    /* Regiter a callback function, associated with the SIGALRM signal, which will be raised when the alarm goes of */
+    signal(SIGALRM, checkJobbList);
+    setitimer(ITIMER_REAL, &alarmTime, NULL); // Start/register the alarm.
 
     /*************************************/
     /*  getting ip and port from args   */
@@ -94,11 +151,11 @@ int main(int argc, char *argv[])
     printf("server started listening on %s:%d\n", serverIp.c_str(), serverPort);
     socklen_t addrLen = sizeof(address);
 
-    calcProtocol serverResponse;
-    memset(&serverResponse, 0, PROTOCOL_LEN);
+    calcProtocol serverJob;
+    memset(&serverJob, 0, PROTOCOL_LEN);
 
-    calcMessage sendMessage;
-    memset(&sendMessage, 0, MESSAGE_LEN);
+    calcMessage serverResponse;
+    memset(&serverResponse, 0, MESSAGE_LEN);
 
     while (1)
     {
@@ -131,64 +188,99 @@ int main(int argc, char *argv[])
 
         if (FD_ISSET(serverSocket, &socketSet))
         {
-            printf("Message from UDP client: \n");
             memset(&buffer, 0, sizeof buffer);
             bytes = recvfrom(serverSocket, &buffer, PROTOCOL_LEN, 0,
                              (struct sockaddr *)&cliaddr, &addrLen);
 
+            cout << "client connected from port: " << cliaddr.sin_port << endl;
+
             if (bytes == MESSAGE_LEN)
             {
-                //TODO: if the response is message, send protocol and add client to id
+                /*********************************/
+                /* accept client and assign job */
+                /*******************************/
+
                 printMessage(buffer.message);
 
-                serverResponse.id = 10;
-                serverResponse.major_version = htons(1);
-                serverResponse.type = htons(2);
-                serverResponse.arith = htonl(randomTask());
+                serverJob.id = (uint32_t)randomInt();
+                serverJob.major_version = htons(1);
+                serverJob.type = htons(2);
+                serverJob.arith = htonl(randomTask());
 
-                if (ntohl(serverResponse.arith) > 4)
+                if (ntohl(serverJob.arith) > 4)
                 {
-                    serverResponse.flValue1 = randomFloat();
-                    serverResponse.flValue2 = randomFloat();
+                    serverJob.flValue1 = randomFloat();
+                    serverJob.flValue2 = randomFloat();
                 }
                 else
                 {
-                    serverResponse.inValue1 = htonl(randomInt());
-                    serverResponse.inValue2 = htonl(randomInt());
+                    serverJob.inValue1 = htonl(randomInt());
+                    serverJob.inValue2 = htonl(randomInt());
                 }
 
-                sendto(serverSocket, &serverResponse, PROTOCOL_LEN, 0,
+                performAssignment(&serverJob);
+                calcJob *newJob = new calcJob();
+
+                newJob->id = serverJob.id;
+                newJob->arith = serverJob.arith;
+                newJob->inResult = serverJob.inResult;
+                newJob->flResult = serverJob.flResult;
+
+                serverJob.flResult = 0.0;
+                serverJob.inResult = 0;
+
+                // TODO: run a timer to delete job after 10s
+                addJob(*newJob);
+                
+                free(newJob);
+
+                sendto(serverSocket, &serverJob, PROTOCOL_LEN, 0,
                        (struct sockaddr *)&cliaddr, sizeof(cliaddr));
             }
 
             if (bytes == PROTOCOL_LEN)
             {
-                sendMessage.type = htons(2);
-                sendMessage.protocol = htons(17);
-                sendMessage.message = htonl(0);
-                sendMessage.major_version = htons(1);
-                sendMessage.minor_version = htons(0);
+                /***********************************/
+                /*  verify the result client sent */
+                /*********************************/
+                serverResponse.type = htons(2);
+                serverResponse.protocol = htons(17);
+                serverResponse.message = htonl(0);
+                serverResponse.major_version = htons(1);
+                serverResponse.minor_version = htons(0);
 
-                printAssignment(buffer.protocol);
-                serverResponse = buffer.protocol;
-                performAssignment(&serverResponse);
+                serverJob = buffer.protocol;
+                printAssignment(serverJob);
+                printResponse(serverJob);
 
-                if (ntohl(serverResponse.arith) > 4)
+                calcJob *givenJob = new calcJob();
+                givenJob = getJobById(buffer.protocol.id);
+
+                // compare the result
+                if (ntohl(serverJob.arith) > 4)
                 {
-                    if (serverResponse.flResult == buffer.protocol.flResult)
+                    if (serverJob.flResult == givenJob->flResult)
                     {
-                        sendMessage.message = htonl(1);
+                        serverResponse.message = htonl(1);
                     }
                 }
                 else
                 {
-                    if (serverResponse.inResult == buffer.protocol.inResult)
+                    if (serverJob.inResult == givenJob->inResult)
                     {
-                        sendMessage.message = htonl(1);
+                        serverResponse.message = htonl(1);
                     }
                 }
+                // compare the id
+                if (serverJob.id != givenJob->id)
+                {
+                    serverResponse.message = htonl(0);
+                }
+                
+                // manually removing the job after it's done
+                removeJob(serverJob.id);
 
-                sendto(serverSocket, &sendMessage, MESSAGE_LEN, 0,
+                sendto(serverSocket, &serverResponse, MESSAGE_LEN, 0,
                        (struct sockaddr *)&cliaddr, sizeof(cliaddr));
             }
         }

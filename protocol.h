@@ -44,9 +44,18 @@ struct __attribute__((__packed__)) calcMessage
   uint16_t minor_version; // 0 , conversion needed
 };
 
-union __attribute__((__packed__)) clientResponse{
+union __attribute__((__packed__)) clientResponse
+{
   struct calcMessage message;
   struct calcProtocol protocol;
+};
+
+struct __attribute__((__packed__)) calcJob
+{
+  uint32_t id;
+  uint32_t arith;
+  double flResult;
+  int32_t inResult;
 };
 
 void printMessage(calcMessage message)
@@ -59,13 +68,13 @@ void printMessage(calcMessage message)
   cout << "minor_version : " << ntohs(message.minor_version) << endl;
 }
 
-void printResponse(calcProtocol protocol)
+void printResponse(calcProtocol protocol, bool fromServer = true)
 {
-  cout << "--server response--" << endl;
+  fromServer ? cout << "--server response--" << endl : cout << "--client response--" << endl;
   cout << "type: " << ntohs(protocol.type) << endl;
   cout << "major_version: " << ntohs(protocol.major_version) << endl;
   cout << "minor_version: " << ntohs(protocol.minor_version) << endl;
-  cout << "id: " << ntohl(protocol.id) << endl;
+  cout << "id: " << protocol.id << endl;
   cout << "arith: " << ntohl(protocol.arith) << endl;
   cout << "inValue1: " << ntohl(protocol.inValue1) << endl;
   cout << "inValue2: " << ntohl(protocol.inValue2) << endl;
@@ -149,7 +158,7 @@ void printAssignment(calcProtocol response)
   }
 }
 
-void performAssignment(calcProtocol *response)
+void performAssignment(calcProtocol *response, bool fromServer = false)
 {
   int operation = ntohl(response->arith);
   int inResult = 0;
@@ -196,10 +205,12 @@ void performAssignment(calcProtocol *response)
 
   if (operation > 4)
   {
-    cout << "client: sent result " << flResult << endl;
+    fromServer ? cout << "server: calculated " : cout << "client: sent result ";
+    cout << flResult << endl;
   }
   else
   {
-    cout << "client: sent result " << inResult << endl;
+    fromServer ? cout << "server: calculated " : cout << "client: sent result ";
+    cout << inResult << endl;
   }
 }
