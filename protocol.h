@@ -56,6 +56,7 @@ struct __attribute__((__packed__)) calcJob
   uint32_t arith;
   double flResult;
   int32_t inResult;
+  long timestamp;
 };
 
 void printMessage(calcMessage message)

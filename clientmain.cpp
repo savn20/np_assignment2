@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
   else if (responseBytes == MESSAGE_LEN)
   {
     cerr << "server: NOT OK!" << endl
-         << "error: server doesn't support the version provided" << clientMessage.major_version << endl
+         << "error: server doesn't support the version provided " << ntohs(clientMessage.major_version) << endl
          << "program terminated due to version error" << endl;
     return -5;
   }

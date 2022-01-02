@@ -22,10 +22,11 @@
 using namespace std;
 
 vector<calcJob> jobs(USER_LIMIT);
+int loopCount = 0;
 
 void addJob(calcJob job)
 {
-    cout << "adding new job: "<< job.id << endl;
+    cout << "adding new job: " << job.id << endl;
 
     jobs.push_back(job);
 }
@@ -43,7 +44,7 @@ calcJob *getJobById(int id)
 
 void removeJob(int jobId)
 {
-    cout << "removing job: "<< jobId << endl;
+    cout << "removing job: " << jobId << endl;
 
     vector<calcJob>::iterator itr = jobs.begin();
 
@@ -53,13 +54,30 @@ void removeJob(int jobId)
 
     if (itr->id == jobId)
     {
-        jobs.erase(itr);
+        itr->id = -1;
+        itr->timestamp = 0;
     }
 }
 
 void checkJobbList(int signum)
 {
-    //TODO: how you remove job?
+    time_t currentTimestamp = time(nullptr);
+    cout << "removing jobs that were created before 10s" << endl;
+
+    // removing jobs that were created before 10s
+    vector<calcJob>::iterator itr = jobs.begin();
+    for (; itr != jobs.end(); ++itr)
+    {
+        if (itr->timestamp == 0)
+            continue;
+
+        if ((currentTimestamp - itr->timestamp) >= 10)
+        {
+            cout << "removing job " << itr->id << endl;
+            itr->id = -1;
+            itr->timestamp = 0;
+        }
+    }
 }
 
 int main(int argc, char *argv[])
@@ -76,14 +94,9 @@ int main(int argc, char *argv[])
         it will be a single alarm 10s after it has been set. 
     */
     struct itimerval alarmTime;
-    alarmTime.it_interval.tv_sec = 10;
-    alarmTime.it_interval.tv_usec = 10;
-    alarmTime.it_value.tv_sec = 10;
-    alarmTime.it_value.tv_usec = 10;
 
     /* Regiter a callback function, associated with the SIGALRM signal, which will be raised when the alarm goes of */
     signal(SIGALRM, checkJobbList);
-    setitimer(ITIMER_REAL, &alarmTime, NULL); // Start/register the alarm.
 
     /*************************************/
     /*  getting ip and port from args   */
@@ -159,6 +172,8 @@ int main(int argc, char *argv[])
 
     while (1)
     {
+        sleep(1);
+        loopCount++;
         /***********************************************/
         /*   setup to monitor all the active clients  */
         /*********************************************/
@@ -192,15 +207,32 @@ int main(int argc, char *argv[])
             bytes = recvfrom(serverSocket, &buffer, PROTOCOL_LEN, 0,
                              (struct sockaddr *)&cliaddr, &addrLen);
 
-            cout << "client connected from port: " << cliaddr.sin_port << endl;
-
+            /*********************************/
+            /* accept client and assign job */
+            /*******************************/
             if (bytes == MESSAGE_LEN)
             {
-                /*********************************/
-                /* accept client and assign job */
-                /*******************************/
+                /* If the server does not support the protocol provides by the client, 
+                // it responds with 'calcMessage', 
+                    type=2,
+                    message=2, 
+                    major_version=1,
+                    minor_version=0.
+                */
+                if (ntohs(buffer.message.type) != 22 ||
+                    ntohs(buffer.message.protocol) != 17 ||
+                    ntohs(buffer.message.major_version) != 1)
+                {
+                    serverResponse.type = htons(2);
+                    serverResponse.message = htonl(2);
+                    serverResponse.major_version = htons(1);
+                    serverResponse.minor_version = htons(0);
 
-                printMessage(buffer.message);
+                    sendto(serverSocket, &serverResponse, MESSAGE_LEN, 0,
+                           (struct sockaddr *)&cliaddr, sizeof(cliaddr));
+
+                    continue;
+                }
 
                 serverJob.id = (uint32_t)randomInt();
                 serverJob.major_version = htons(1);
@@ -219,30 +251,36 @@ int main(int argc, char *argv[])
                 }
 
                 performAssignment(&serverJob);
+
+                time_t result = time(nullptr);
                 calcJob *newJob = new calcJob();
 
                 newJob->id = serverJob.id;
                 newJob->arith = serverJob.arith;
                 newJob->inResult = serverJob.inResult;
                 newJob->flResult = serverJob.flResult;
-
+                newJob->timestamp = result;
                 serverJob.flResult = 0.0;
                 serverJob.inResult = 0;
 
-                // TODO: run a timer to delete job after 10s
                 addJob(*newJob);
-                
+                alarmTime.it_interval.tv_sec = 0;
+                alarmTime.it_interval.tv_usec = 0;
+                alarmTime.it_value.tv_sec = 10;
+                alarmTime.it_value.tv_usec = 0;
+                setitimer(ITIMER_REAL, &alarmTime, NULL); // Start/register the alarm.
+
                 free(newJob);
 
                 sendto(serverSocket, &serverJob, PROTOCOL_LEN, 0,
                        (struct sockaddr *)&cliaddr, sizeof(cliaddr));
             }
 
+            /***********************************/
+            /*  verify the result client sent */
+            /*********************************/
             if (bytes == PROTOCOL_LEN)
             {
-                /***********************************/
-                /*  verify the result client sent */
-                /*********************************/
                 serverResponse.type = htons(2);
                 serverResponse.protocol = htons(17);
                 serverResponse.message = htonl(0);
@@ -251,7 +289,6 @@ int main(int argc, char *argv[])
 
                 serverJob = buffer.protocol;
                 printAssignment(serverJob);
-                printResponse(serverJob);
 
                 calcJob *givenJob = new calcJob();
                 givenJob = getJobById(buffer.protocol.id);
@@ -271,12 +308,15 @@ int main(int argc, char *argv[])
                         serverResponse.message = htonl(1);
                     }
                 }
+
+                time_t currentTimestamp = time(nullptr);
+
                 // compare the id
-                if (serverJob.id != givenJob->id)
+                if (serverJob.id != givenJob->id || (currentTimestamp - givenJob->timestamp) >= 10)
                 {
                     serverResponse.message = htonl(0);
                 }
-                
+
                 // manually removing the job after it's done
                 removeJob(serverJob.id);
 

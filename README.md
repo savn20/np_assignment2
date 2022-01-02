@@ -38,11 +38,11 @@
    - [x] Start listening for clients
 2. Handling Clients
    - [x] Handle multiple clients
-   - [] Accept clients that supports version 1
+   - [x] Accept clients that supports version 1
 3. Task Management
     - [x] Generate random task
-    - [] Set timeout for 10s
-    - [] Reject clients that sends incorrect IDs 
+    - [x] Set timeout for 10s
+    - [x] Reject clients that sends incorrect IDs 
 
 
 ### Debugging
