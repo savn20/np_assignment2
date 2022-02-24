@@ -4,6 +4,8 @@ extern "C"{
 
 #ifndef __CALC_LIB
 #define __CALC_LIB
+#define SOCKET_FAILURE -1
+#include "stdint.h"
 
 /* 
 
@@ -27,6 +29,7 @@ Implementation in calcLib.c
   int randomInt(void); // Return a random integer, between 0 and 100. 
   double randomFloat(void); // Return a random float between 0.0 and 100.0
   uint32_t randomTask(void); // Return a random math operation 
+  void verify(int hasError);
 
 #endif
 

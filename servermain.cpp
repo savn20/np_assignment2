@@ -15,7 +15,7 @@
 
 #define BACKLOG 5
 #define DEBUG
-#define USER_LIMIT 50
+#define USER_LIMIT 150
 #define MESSAGE_LEN sizeof(calcMessage)
 #define PROTOCOL_LEN sizeof(calcProtocol)
 
@@ -119,8 +119,7 @@ int main(int argc, char *argv[])
         clientSocket = -1,
         maxSocket = -1,
         interrupt = -1,
-        bytes = -1,
-        acceptMultipleClients = 1;
+        bytes = -1;
 
     /*************************************/
     /*   setting up server metadata     */

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <time.h>
 
 /* Here we use " as the calcLib.c and calcLib.h files are in the same folder, and are to be BUILT
@@ -73,5 +74,13 @@ double randomFloat(void){
 
 uint32_t randomTask(void){
    uint32_t tasks=sizeof(arith)/(sizeof(char*)); 
-  return (rand() % tasks) + 1;
+   return (rand() % tasks) + 1;
 };
+
+void verify(int hasError) {
+  if (hasError == SOCKET_FAILURE)
+  {
+    perror("error: something went wrong dealing with sockets\n");
+    exit(-1);
+  }
+}
