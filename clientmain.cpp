@@ -16,8 +16,8 @@
 
 // comment the DEBUG macro to turn off comments in the console
 #define DEBUG
-// Remove comment to add 10s delay to client
-// #define DELAY
+// comment the DELAY macro to add 10s delay 
+#define DELAY
 
 using namespace std;
 
@@ -149,7 +149,7 @@ int main(int argc, char *argv[]) {
   /****************************************/
   /* task: sending result of given task  */
   /**************************************/
-#ifdef DELAY
+#ifndef DELAY
   sleep(10);
 #endif
 
